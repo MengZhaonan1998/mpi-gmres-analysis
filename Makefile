@@ -2,20 +2,9 @@
 #module load 2022r2
 #module load openmpi
 
-# possible values, write STENCIL=MPI_CART, STENCIL=GLOBAL_COMM, STENCIL=ONE_SIDED
-#
-#STENCIL_VERSION := $(STENCIL)
-#ifeq ($(strip $(STENCIL_VERSION)),)
-#	STENCIL_VERSION = GLOBAL_COMM
-#endif
-
-
 CXX=mpic++
-CXX_FLAGS=-O2 -g -fopenmp -std=c++17 #-DSTENCIL_$(STENCIL_VERSION)
-#CXX_FLAGS=-O3 -march=native -g -fopenmp -std=c++17
-#DEFS=-DUSE_POLY
-
-#main_gmres_poisson.o: FLAGS+=-DUSE_POLY
+#CXX_FLAGS=-O2 -g -fopenmp -std=c++17
+CXX_FLAGS=-O3 -march=native -g -fopenmp -std=c++17
 
 #default target (built when typing just "make")
 default: run_tests.x main_cg_poisson.x main_gmres_poisson_global.x main_polyg_poisson_global.x main_diagg_poisson_global.x main_gmres_poisson_cart.x main_polyg_poisson_cart.x main_diagg_poisson_cart.x main_gmres_poisson_win.x main_polyg_poisson_win.x main_diagg_poisson_win.x

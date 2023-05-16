@@ -101,7 +101,7 @@ void polygmres_solver(stencil3d* op, block_params const* BP, int n, double* x, d
   // start GMRES iteration
   int iter = -1;
   while (true)
-  { Timer timerGMRES("Full GMRES iteration");
+  { Timer t("polygmres iteration");
     iter++;
 
     if (verbose && rank==0 && iter%10==0)
@@ -124,8 +124,8 @@ void polygmres_solver(stencil3d* op, block_params const* BP, int n, double* x, d
     error = std::abs( beta[iter+1] )/ b_norm;
 
   } // end of while-loop
-
-  std::cout << std::setw(4) << iter << "\t" << std::setw(8) << std::setprecision(4) << error << std::endl;
+	if (rank==0)
+		std::cout << std::setw(4) << iter << "\t" << std::setw(8) << std::setprecision(4) << error << std::endl;
 
   // backward substitution
   double* y = new double[iter];

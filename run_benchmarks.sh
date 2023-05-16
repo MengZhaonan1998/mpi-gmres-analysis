@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #Scaling benchmarks
-echo "With 32 processes, scaling benchmark:"
-sbatch -o slurm-scaling-32-$$.out -n 32 scaling_benchmarks.slurm
+echo "With 48 processes, scaling benchmark:"
+sbatch -o slurm-scaling-48-$$.out -n 48 scaling_benchmarks.slurm
 
 args=(80 64)
 for arg in "${args[@]}"; do

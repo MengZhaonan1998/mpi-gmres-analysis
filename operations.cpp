@@ -21,7 +21,7 @@ void init(int const local_n, double* x, double const value) {
 }
 
 double dot(int const local_n, double const* x, double const* y) {
-	Timer timerdot("1. dot operation");
+	//Timer timerdot("1. dot operation");
 	double local_dot = 0.0;
 	
 	int size;
@@ -37,7 +37,7 @@ double dot(int const local_n, double const* x, double const* y) {
 }
 
 void axpby(int const local_n, double const a, double const* x, double const b, double* y){
-	Timer timeraxpby("2. axpby operation");
+	//Timer timeraxpby("2. axpby operation");
 	for (int id=0; id<local_n; id++) {
 		y[id] = a*x[id]+b*y[id];
 	}
@@ -46,7 +46,7 @@ void axpby(int const local_n, double const a, double const* x, double const b, d
 
 void axpby(int const local_n, double const a, double const* x, 
 	      double const b, double const* y, double const c, double* z){
-        Timer timeraxpby("2. axpby operation");
+        //Timer timeraxpby("2. axpby operation");
 	for (int id=0; id<local_n; id++) {
 		z[id] = a*x[id]+b*y[id]+c*z[id];
 	}
@@ -55,7 +55,7 @@ void axpby(int const local_n, double const a, double const* x,
 
 // y = a*x+y
 void axpy(int const local_n, double const a, double const* x, double* y){
-	Timer timeraxpby("2. axpby operation");
+	//Timer timeraxpby("2. axpby operation");
 	for (int id=0; id<local_n; id++) {
 		y[id] += a*x[id];
 	}
@@ -64,11 +64,11 @@ void axpy(int const local_n, double const a, double const* x, double* y){
 
 void apply_stencil3d(stencil3d const* S, block_params const* BP, double const* u, double* v) {
 #if defined(STENCIL_ONE_SIDED)
-	Timer t("apply_stencil3d one sided");
+	Timer t("apply_stencil3d one_sided");
 #elif defined(STENCIL_GLOBAL_COMM)
-	Timer t("apply_stencil3d global comm");
+	Timer t("apply_stencil3d global");
 #elif defined(STENCIL_MPI_CART)
-	Timer t("apply_stencil3d mpi cart");
+	Timer t("apply_stencil3d cart");
 #endif
 	int sz_ew = BP->by_sz*BP->bz_sz;
 	int sz_ns = BP->bx_sz*BP->bz_sz;
@@ -128,83 +128,92 @@ void apply_stencil3d(stencil3d const* S, block_params const* BP, double const* u
 			}
 		}
 	}
-	///////////////// COMMUNICATION START /////////////////////
-	#if defined(STENCIL_ONE_SIDED)
-		// Wait until neigbours' buffers are filled.
-		MPI_Win_fence(0, BP->win_e);
-		MPI_Win_fence(0, BP->win_w);
-		MPI_Win_fence(0, BP->win_n);
-		MPI_Win_fence(0, BP->win_s);
-		MPI_Win_fence(0, BP->win_t);
-		MPI_Win_fence(0, BP->win_b);
-		// Read from neighbours' buffers.
-		if (BP->rank_e != MPI_PROC_NULL) {
-			MPI_Get(BP->recv_east_buffer, sz_ew, MPI_DOUBLE, BP->rank_e, 0, sz_ew, MPI_DOUBLE, BP->win_e);
-		}
-		if (BP->rank_w != MPI_PROC_NULL) {
-			MPI_Get(BP->recv_west_buffer, sz_ew, MPI_DOUBLE, BP->rank_w, 0, sz_ew, MPI_DOUBLE, BP->win_w);
-		}
-		if (BP->rank_n != MPI_PROC_NULL) {
-			MPI_Get(BP->recv_north_buffer, sz_ns, MPI_DOUBLE, BP->rank_n, 0, sz_ns, MPI_DOUBLE, BP->win_n);
-		}
-		if (BP->rank_s != MPI_PROC_NULL) {
-			MPI_Get(BP->recv_south_buffer, sz_ns, MPI_DOUBLE, BP->rank_s, 0, sz_ns, MPI_DOUBLE, BP->win_s);
-		}
-		if (BP->rank_t != MPI_PROC_NULL) {
-			MPI_Get(BP->recv_top_buffer, sz_tb, MPI_DOUBLE, BP->rank_t, 0, sz_tb, MPI_DOUBLE, BP->win_t);
-		}
-		if (BP->rank_b != MPI_PROC_NULL) {
-			MPI_Get(BP->recv_bot_buffer, sz_tb, MPI_DOUBLE, BP->rank_b, 0, sz_tb, MPI_DOUBLE, BP->win_b);
-		}
-		// Wait until we are done reading neighbours' buffers.
-		MPI_Win_fence(0, BP->win_e);
-		MPI_Win_fence(0, BP->win_w);
-		MPI_Win_fence(0, BP->win_n);
-		MPI_Win_fence(0, BP->win_s);
-		MPI_Win_fence(0, BP->win_t);
-		MPI_Win_fence(0, BP->win_b);
-	#elif defined(STENCIL_GLOBAL_COMM) || defined(STENCIL_MPI_CART)
-		MPI_Request requests[12];
-		MPI_Status statuses[12];
-		//west
-		if (BP->rank_w != MPI_PROC_NULL) {
-			MPI_Isend(BP->send_west_buffer, sz_ew, MPI_DOUBLE, BP->rank_w, 0, BP->comm, &requests[0]);
-			MPI_Irecv(BP->recv_west_buffer, sz_ew, MPI_DOUBLE, BP->rank_w, 1, BP->comm, &requests[1]);
-		}
-		//east
-		if (BP->rank_e != MPI_PROC_NULL) {
-			MPI_Isend(BP->send_east_buffer, sz_ew, MPI_DOUBLE, BP->rank_e, 1, BP->comm, &requests[2]);
-			MPI_Irecv(BP->recv_east_buffer, sz_ew, MPI_DOUBLE, BP->rank_e, 0, BP->comm, &requests[3]);
-		}
-		//south
-		if (BP->rank_s != MPI_PROC_NULL) {
-			MPI_Isend(BP->send_south_buffer, sz_ns, MPI_DOUBLE, BP->rank_s, 0, BP->comm, &requests[4]);
-			MPI_Irecv(BP->recv_south_buffer, sz_ns, MPI_DOUBLE, BP->rank_s, 1, BP->comm, &requests[5]);
-		}
-		//north
-		if (BP->rank_n != MPI_PROC_NULL) {
-			MPI_Isend(BP->send_north_buffer, sz_ns, MPI_DOUBLE, BP->rank_n, 1, BP->comm, &requests[6]);
-			MPI_Irecv(BP->recv_north_buffer, sz_ns, MPI_DOUBLE, BP->rank_n, 0, BP->comm, &requests[7]);
-		}
-		//bot
-		if (BP->rank_b != MPI_PROC_NULL) {
-			MPI_Isend(BP->send_bot_buffer, sz_tb, MPI_DOUBLE, BP->rank_b, 0, BP->comm, &requests[8]);
-			MPI_Irecv(BP->recv_bot_buffer, sz_tb, MPI_DOUBLE, BP->rank_b, 1, BP->comm, &requests[9]);
-		}
-		//top
-		if (BP->rank_t != MPI_PROC_NULL) {
-			MPI_Isend(BP->send_top_buffer, sz_tb, MPI_DOUBLE, BP->rank_t, 1, BP->comm, &requests[10]);
-			MPI_Irecv(BP->recv_top_buffer, sz_tb, MPI_DOUBLE, BP->rank_t, 0, BP->comm, &requests[11]);
-		}
-		
-		//Wait for recv buffers to be filled
-		int neighbours[] = {BP->rank_w, BP->rank_e, BP->rank_s, BP->rank_n, BP->rank_b, BP->rank_t};
-		for (int id=0; id<6; id++)
-			if (neighbours[id] != MPI_PROC_NULL)
-				MPI_Wait(&requests[2*id+1], MPI_STATUS_IGNORE);
-	#else
-		#error "No stencil version specified"
-	#endif
+	{
+		///////////////// COMMUNICATION START /////////////////////
+		#if defined(STENCIL_ONE_SIDED)
+			Timer t_comm("stencil communication one_sided");
+			// Wait until neigbours' buffers are filled.
+			MPI_Win_fence(0, BP->win_e);
+			MPI_Win_fence(0, BP->win_w);
+			MPI_Win_fence(0, BP->win_n);
+			MPI_Win_fence(0, BP->win_s);
+			MPI_Win_fence(0, BP->win_t);
+			MPI_Win_fence(0, BP->win_b);
+			// Read from neighbours' buffers.
+			if (BP->rank_e != MPI_PROC_NULL) {
+				MPI_Get(BP->recv_east_buffer, sz_ew, MPI_DOUBLE, BP->rank_e, 0, sz_ew, MPI_DOUBLE, BP->win_e);
+			}
+			if (BP->rank_w != MPI_PROC_NULL) {
+				MPI_Get(BP->recv_west_buffer, sz_ew, MPI_DOUBLE, BP->rank_w, 0, sz_ew, MPI_DOUBLE, BP->win_w);
+			}
+			if (BP->rank_n != MPI_PROC_NULL) {
+				MPI_Get(BP->recv_north_buffer, sz_ns, MPI_DOUBLE, BP->rank_n, 0, sz_ns, MPI_DOUBLE, BP->win_n);
+			}
+			if (BP->rank_s != MPI_PROC_NULL) {
+				MPI_Get(BP->recv_south_buffer, sz_ns, MPI_DOUBLE, BP->rank_s, 0, sz_ns, MPI_DOUBLE, BP->win_s);
+			}
+			if (BP->rank_t != MPI_PROC_NULL) {
+				MPI_Get(BP->recv_top_buffer, sz_tb, MPI_DOUBLE, BP->rank_t, 0, sz_tb, MPI_DOUBLE, BP->win_t);
+			}
+			if (BP->rank_b != MPI_PROC_NULL) {
+				MPI_Get(BP->recv_bot_buffer, sz_tb, MPI_DOUBLE, BP->rank_b, 0, sz_tb, MPI_DOUBLE, BP->win_b);
+			}
+			// Wait until we are done reading neighbours' buffers.
+			MPI_Win_fence(0, BP->win_e);
+			MPI_Win_fence(0, BP->win_w);
+			MPI_Win_fence(0, BP->win_n);
+			MPI_Win_fence(0, BP->win_s);
+			MPI_Win_fence(0, BP->win_t);
+			MPI_Win_fence(0, BP->win_b);
+		#elif defined(STENCIL_GLOBAL_COMM) || defined(STENCIL_MPI_CART)
+			#if defined(STENCIL_GLOBAL_COMM)
+				Timer t_comm("stencil communication global");
+			#else
+				Timer t_comm("stencil communication cart");
+			#endif
+			MPI_Request requests[12];
+			MPI_Status statuses[12];
+			//west
+			if (BP->rank_w != MPI_PROC_NULL) {
+				MPI_Isend(BP->send_west_buffer, sz_ew, MPI_DOUBLE, BP->rank_w, 0, BP->comm, &requests[0]);
+				MPI_Irecv(BP->recv_west_buffer, sz_ew, MPI_DOUBLE, BP->rank_w, 1, BP->comm, &requests[1]);
+			}
+			//east
+			if (BP->rank_e != MPI_PROC_NULL) {
+				MPI_Isend(BP->send_east_buffer, sz_ew, MPI_DOUBLE, BP->rank_e, 1, BP->comm, &requests[2]);
+				MPI_Irecv(BP->recv_east_buffer, sz_ew, MPI_DOUBLE, BP->rank_e, 0, BP->comm, &requests[3]);
+			}
+			//south
+			if (BP->rank_s != MPI_PROC_NULL) {
+				MPI_Isend(BP->send_south_buffer, sz_ns, MPI_DOUBLE, BP->rank_s, 0, BP->comm, &requests[4]);
+				MPI_Irecv(BP->recv_south_buffer, sz_ns, MPI_DOUBLE, BP->rank_s, 1, BP->comm, &requests[5]);
+			}
+			//north
+			if (BP->rank_n != MPI_PROC_NULL) {
+				MPI_Isend(BP->send_north_buffer, sz_ns, MPI_DOUBLE, BP->rank_n, 1, BP->comm, &requests[6]);
+				MPI_Irecv(BP->recv_north_buffer, sz_ns, MPI_DOUBLE, BP->rank_n, 0, BP->comm, &requests[7]);
+			}
+			//bot
+			if (BP->rank_b != MPI_PROC_NULL) {
+				MPI_Isend(BP->send_bot_buffer, sz_tb, MPI_DOUBLE, BP->rank_b, 0, BP->comm, &requests[8]);
+				MPI_Irecv(BP->recv_bot_buffer, sz_tb, MPI_DOUBLE, BP->rank_b, 1, BP->comm, &requests[9]);
+			}
+			//top
+			if (BP->rank_t != MPI_PROC_NULL) {
+				MPI_Isend(BP->send_top_buffer, sz_tb, MPI_DOUBLE, BP->rank_t, 1, BP->comm, &requests[10]);
+				MPI_Irecv(BP->recv_top_buffer, sz_tb, MPI_DOUBLE, BP->rank_t, 0, BP->comm, &requests[11]);
+			}
+			
+			//Wait for recv buffers to be filled
+			int neighbours[] = {BP->rank_w, BP->rank_e, BP->rank_s, BP->rank_n, BP->rank_b, BP->rank_t};
+			for (int id=0; id<6; id++)
+				if (neighbours[id] != MPI_PROC_NULL)
+					MPI_Wait(&requests[2*id+1], MPI_STATUS_IGNORE);
+		#else
+			#error "No stencil version specified"
+		#endif
+		///////////////// COMMUNICATION START /////////////////////
+	}
 	//Use buffers for edge points, apply the stencil.
 	for (int iz=0; iz<BP->bz_sz; iz++) {
 		for (int iy=0; iy<BP->by_sz; iy++) {
@@ -354,8 +363,6 @@ void polynomial(stencil3d* op, block_params const* BP, double* x, double* t1, do
 
 // apply given rotation
 void given_rotation(int const k, double* h, double* cs, double* sn){
-  Timer timergivens("4. Givens rotation");
-
   double temp, t, cs_k, sn_k;
   for (int i=0; i<k; i++)
   {
@@ -378,7 +385,7 @@ void given_rotation(int const k, double* h, double* cs, double* sn){
 
 // Arnoldi function (without preconditioning)
 void arnoldi(int const k, double* Q, double* h, stencil3d const* op, block_params const* BP) {
-  Timer timerArnoldi("5. Arnoldi function");
+  Timer t("Arnoldi no precond");
   int n = op->nx * op->ny * op->nz;
   apply_stencil3d(op, BP, Q+k*n, Q+(k+1)*n);
 	
@@ -398,7 +405,10 @@ void arnoldi(int const k, double* Q, double* h, stencil3d const* op, block_param
 
 // Arnoldi function (with polynomial preconditioning)
 void arnoldi(int const k, double* Q, double* h, stencil3d* op, block_params const* BP, int order) {
-  Timer timerArnoldi("5. Arnoldi function");
+	char timer_label[25];
+	sprintf(timer_label, "Arnoldi poly precond order %d", order);
+  Timer t(timer_label);
+
   int n = op->nx * op->ny * op->nz;
   double *x1 = new double[n];
   double *x2 = new double[n];

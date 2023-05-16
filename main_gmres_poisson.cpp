@@ -50,7 +50,7 @@ stencil3d laplace3d_stencil(int nx, int ny, int nz, double dx, double dy, double
 
   #ifdef USE_DIAG
   {
-    std::cout << "USE_DIAG case" <<std::endl;
+    //std::cout << "USE_DIAG case" <<std::endl;
     L.value_n = L.value_n / L.value_c;
     L.value_e = L.value_e / L.value_c;
     L.value_s = L.value_s / L.value_c;
@@ -149,9 +149,9 @@ int main(int argc, char* argv[])
   double resNorm, tol=std::sqrt(std::numeric_limits<double>::epsilon());
 
   try {
-  //Timer t("gmres solver");
+  Timer t("full solver");
   #ifdef USE_POLY
-     std::cout << "USE_POLY case for order: " << order <<std::endl;
+     //std::cout << "USE_POLY case for order: " << order <<std::endl;
      polygmres_solver(&L, &BP, loc_n, x, b, tol, maxIter, &resNorm, &numIter, order, 1);
   #else
      gmres_solver(&L, &BP, loc_n, x, b, tol, maxIter, &resNorm, &numIter, 1);

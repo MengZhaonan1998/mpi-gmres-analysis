@@ -1,5 +1,5 @@
 #include "operations.hpp"
-#include "gmres_solver.hpp"
+#include "solver.hpp"
 #include "timer.hpp"
 
 #include <iostream>
@@ -153,6 +153,10 @@ int main(int argc, char* argv[])
   #ifdef USE_POLY
      //std::cout << "USE_POLY case for order: " << order <<std::endl;
      polygmres_solver(&L, &BP, loc_n, x, b, tol, maxIter, &resNorm, &numIter, order, 1);
+  #elif USE_JCOB
+     jacobi_solver(&L, &BP, loc_n, x, b, tol, maxIter, &resNorm, &numIter,1);
+  #elif USE_CG
+     cg_solver(&L, &BP, loc_n, x, b, tol, maxIter, &resNorm, &numIter, 1);
   #else
      gmres_solver(&L, &BP, loc_n, x, b, tol, maxIter, &resNorm, &numIter, 1);
   #endif

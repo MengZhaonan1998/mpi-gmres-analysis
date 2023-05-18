@@ -1,4 +1,4 @@
-#include "cg_solver.hpp"
+#include "solver.hpp"
 #include "operations.hpp" //TODO linking??
 #include <cmath>
 #include <stdexcept>

@@ -8,8 +8,6 @@
 
 #include <cmath>
 
-#define USE_MPI_CART
-
 // Main program that solves the 3D Poisson equation
 // on a unit cube. The grid size (nx,ny,nz) can be 
 // passed to the executable like this:
@@ -52,6 +50,7 @@ stencil3d laplace3d_stencil(int nx, int ny, int nz, double dx, double dy, double
 
   #ifdef USE_DIAG
   {
+    //std::cout << "USE_DIAG case" <<std::endl;
     L.value_n = L.value_n / L.value_c;
     L.value_e = L.value_e / L.value_c;
     L.value_s = L.value_s / L.value_c;
@@ -75,11 +74,14 @@ int main(int argc, char* argv[])
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   int nx, ny, nz;
+  int order=0; //The order of the polynomial preconditioner
 
-  if      (argc==1) {nx=64;            ny=64;            nz=64;}
-  else if (argc==2) {nx=atoi(argv[1]); ny=nx;            nz=nx;}
-  else if (argc==4) {nx=atoi(argv[1]); ny=atoi(argv[2]); nz=atoi(argv[3]);}
-  else {std::cerr << "Invalid number of arguments (should be 0, 1 or 3)"<<std::endl; exit(-1);}
+  if      (argc==1) {nx=64;            ny=64;            nz=64;            order = 2;}
+  else if (argc==2) {nx=atoi(argv[1]); ny=nx;            nz=nx;            order = 2;}
+  else if (argc==3) {nx=atoi(argv[1]); ny=nx;            nz=nx;            order = atoi(argv[2]);}
+  else if (argc==4) {nx=atoi(argv[1]); ny=atoi(argv[2]); nz=atoi(argv[3]); order = 2;         }
+  else if (argc==5) {nx=atoi(argv[1]); ny=atoi(argv[2]); nz=atoi(argv[3]); order = atoi(argv[4]);}
+  else {std::cerr << "Invalid number of arguments (should be 0, 1, 2 or 3, or 4)"<<std::endl; exit(-1);}
   if (ny<0) ny=nx;
   if (nz<0) nz=nx;
 
@@ -88,44 +90,24 @@ int main(int argc, char* argv[])
 
   // create the domain decomposition
   block_params BP;
-  #ifdef USE_MPI_CART 
-  {BP = create_blocks_cart(nx,ny,nz);}
-  #else 
-  {BP = create_blocks(nx,ny,nz);}
-  #endif
+  BP = create_blocks(nx,ny,nz);
 
   if (rank==0)
   { 
-     std::cout << "Domain decomposition:"<<std::endl; 
-     std::cout << "Grid is           ["<<nx << " x "<< ny << " x " << nz << "]"<<std::endl;
-     std::cout << "Processor grid is ["<<BP.bx_sz << " x "<<BP.by_sz<<" x "<<BP.bz_sz << "]"<<std::endl;
+     std::cout << "Grid is ["<<nx << " x "<< ny << " x " << nz << "] and we have " << size << " processes." << std::endl;
   }
 
   //ordered printing for nicer output
-  for (int p=0; p<size; p++){
+  /*for (int p=0; p<size; p++){
      if (rank==p)std::cout << "Processor " << p << " grid is ["<<BP.bx_sz << " x "<<BP.by_sz<<" x "<<BP.bz_sz << "]"<<std::endl;
      MPI_Barrier(MPI_COMM_WORLD);
-  }
-
-//  #ifdef USE_MPI_CART 
-//  {
-//   for (int p=0; p<size; p++){
-//      if (rank==p)std::cout << "Processor " << p << " coordinates are ("<< coord[0] << ", "<< coord[1] <<", "<< coord[2] << ")"<<std::endl;
-//      MPI_Barrier(MPI_COMM_WORLD);
-//   }
-//  }
-//  #endif
+  }*/
 
   double dx=1.0/(nx-1), dy=1.0/(ny-1), dz=1.0/(nz-1);
 
   // Laplace operator
   stencil3d L = laplace3d_stencil(BP.bx_sz, BP.by_sz, BP.bz_sz, dx, dy, dz);
   
-  // The stencil needs to take the block_params object along
-  // so that the offsets and neighbors can be determined
-  // inside the apply function
-  //L.BP=BP; //TODO should we do this instead?
-
   long loc_n = BP.bx_sz*BP.by_sz*BP.bz_sz;
   // solution vector: start with a 0 vector
   double *x = new double[loc_n];
@@ -167,9 +149,10 @@ int main(int argc, char* argv[])
   double resNorm, tol=std::sqrt(std::numeric_limits<double>::epsilon());
 
   try {
-  //Timer t("gmres solver");
+  Timer t("full solver");
   #ifdef USE_POLY
-     polygmres_solver(&L, &BP, loc_n, x, b, tol, maxIter, &resNorm, &numIter, 2, 1);
+     //std::cout << "USE_POLY case for order: " << order <<std::endl;
+     polygmres_solver(&L, &BP, loc_n, x, b, tol, maxIter, &resNorm, &numIter, order, 1);
   #else
      gmres_solver(&L, &BP, loc_n, x, b, tol, maxIter, &resNorm, &numIter, 1);
   #endif

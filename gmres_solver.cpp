@@ -1,6 +1,6 @@
 #include "timer.hpp"
 #include "operations.hpp"
-#include "gmres_solver.hpp"
+#include "solver.hpp"
 
 #include <cmath>
 #include <stdexcept>

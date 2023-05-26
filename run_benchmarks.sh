@@ -1,18 +1,21 @@
 #!/bin/bash
 
-#Scaling benchmarks
-echo "With 48 processes, scaling benchmark:"
-sbatch -o slurm-scaling-48-$$.out -n 48 scaling_benchmarks.slurm
+# run all benchmarks, defined in .slurm files
 
-args=(80 64)
-for arg in "${args[@]}"; do
-		echo "With $arg processes:"
-		sbatch -o slurm-communication-$arg-$$.out -n $arg research_account_communication_benchmarks.slurm
-done
-args=(48 36 27 18 12 8 4 2 1)
-for arg in "${args[@]}"; do
-		echo "With $arg processes:"
-    sbatch -o slurm-communication-$arg-$$.out -n "$arg" communication_benchmarks.slurm
-    sbatch -o slurm-precond-$arg-$$.out -n "$arg" precond_benchmarks.slurm
-done
+#echo "COMMUNICATION BENCHMARKS:"
+#for processes in 150 100 64 48 36 18 12 4; do
+#	nodes=$(((processes-1)/48+1))
+#	if (( nodes > 1 )); then
+#		echo "With $processes processes, $nodes nodes:"
+#		sbatch -o slurm-communication-$processes-$$.out -n $processes -N $nodes research_account_communication_benchmarks.slurm
+#	else
+#		echo "With $processes processes:"
+#		sbatch -o slurm-communication-$processes-$$.out -n "$processes" communication_benchmarks.slurm
+#	fi
+#done
 
+echo "POLYNOMIAL PRECONDITIONER BENCHMARKS:"
+for processes in 48; do
+	echo "With $processes processes:"
+	sbatch -o slurm-precond-$processes-$$.out -n "$processes" precond_benchmarks.slurm
+done

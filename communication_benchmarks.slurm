@@ -8,8 +8,8 @@
 #SBATCH --reservation=wi4450
 #SBATCH --time=00:10:00
 
-# run GMRES for a n^3 Poisson problem
-n=200
+# run GMRES for a n^3 Poisson problem with different communications
+n=300
 
 srun ./main_gmres_poisson_global.x $n
 srun ./main_gmres_poisson_win.x $n

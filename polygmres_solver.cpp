@@ -64,9 +64,10 @@ void polygmres_solver(stencil3d* op, block_params const* BP, int n, double* x, d
   //apply_stencil3d(op, BP,x1, x2);
   //axpby(n, -3.0, x1, 1.0, x2, 3.0, r);
   //axpby(n, 1.0, b, -1.0, r);
+
   apply_stencil3d(op, BP, x, r);
   axpby(n, 1.0, b, -1.0, r);
-  polynomial(op, BP, r, x1, x2, n, order);
+  //polynomial(op, BP, r, x1, x2, n, order);
 
 
   // compute the error
